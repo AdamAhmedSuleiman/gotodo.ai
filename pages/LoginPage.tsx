@@ -1,13 +1,12 @@
-
 // src/pages/LoginPage.tsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.js';
 import { useToast } from '../contexts/ToastContext.js'; 
-import Input from '../App components/ui/Input.js'; 
-import Button from '../App components/ui/Button.js'; 
-import { APP_NAME, ICON_PATHS } from '../src/constants.js'; 
-import Icon from '../App components/ui/Icon.js'; 
+import Input from '../components/ui/Input.js'; 
+import Button from '../components/ui/Button.js'; 
+import { APP_NAME, ICON_PATHS } from '../constants.js'; 
+import Icon from '../components/ui/Icon.js'; 
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');

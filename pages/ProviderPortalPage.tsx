@@ -1,43 +1,43 @@
 // src/pages/ProviderPortalPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import EarningsChart from '../App components/dashboard/EarningsChart.js';
+import EarningsChart from '../components/dashboard/EarningsChart.js';
 import { 
     EarningDataPoint, RequestData, ServiceType, ProfessionalService, Review, Product, Vehicle, 
     RequestStatus, ProviderAvailabilitySlot, TransportationMode, GeoLocation, User, ChatMessage, 
     RequesterRating, ProviderDocument, DocumentStatus, PayoutAccount, PayoutHistoryEntry, HeatmapTile,
     DailyRoutineRoute, HunterModeSettings, MockProviderBid, BlockedTimeSlot
 } from '../types.js';
-import Icon from '../App components/ui/Icon.js';
+import Icon from '../components/ui/Icon.js';
 import { ICON_PATHS } from '../constants.js';
-import Button from '../App components/ui/Button.js';
-import LoadingSpinner from '../App components/ui/LoadingSpinner.js';
+import Button from '../components/ui/Button.js';
+import LoadingSpinner from '../components/ui/LoadingSpinner.js';
 import { getEarningsInsights, optimizeActiveTaskRouteAI } from '../services/geminiService.js';
 import * as taskService from '../services/taskService.js'; 
 import * as userDataService from '../services/userDataService.js'; 
 import * as providerService from '../services/providerService.js'; 
-import ManageServicesModal from '../App components/provider/ManageServicesModal.js';
-import ManageProductsModal from '../App components/provider/ManageProductsModal.js';
-import ManageVehiclesModal from '../App components/provider/ManageVehiclesModal.js';
-import ManageAvailabilityModal from '../App components/provider/ManageAvailabilityModal.js';
-import ProviderEarningsHistoryModal from '../App components/provider/ProviderEarningsHistoryModal.js';
-import RateRequesterModal from '../App components/provider/RateRequesterModal.js';
-import ChatModal from '../App components/shared/ChatModal.js';
+import ManageServicesModal from '../components/provider/ManageServicesModal.js';
+import ManageProductsModal from '../components/provider/ManageProductsModal.js';
+import ManageVehiclesModal from '../components/provider/ManageVehiclesModal.js';
+import ManageAvailabilityModal from '../components/provider/ManageAvailabilityModal.js';
+import ProviderEarningsHistoryModal from '../components/provider/ProviderEarningsHistoryModal.js';
+import RateRequesterModal from '../components/provider/RateRequesterModal.js';
+import ChatModal from '../components/shared/ChatModal.js';
 // import MapDisplay from '../components/map/MapDisplay.js'; // Not actively used on this page for provider currently
-import StarRating from '../App components/ui/StarRating.js';
-import ContextualHelpPanel from '../App components/ui/ContextualHelpPanel.js';
-import HeatmapPlaceholder, { generateMockHeatmapTiles } from '../App components/provider/HeatmapPlaceholder.js';
-import ManageDocumentsModal from '../App components/provider/ManageDocumentsModal.js';
-import PayoutSettingsModal from '../App components/provider/PayoutSettingsModal.js'; 
-import SetWorkDestinationModal from '../App components/provider/SetWorkDestinationModal.js'; 
-import ManageDailyRoutesModal from '../App components/provider/ManageDailyRoutesModal.js';
-import ProductScanModal from '../App components/provider/ProductScanModal.js'; 
-import HunterModeSettingsModal from '../App components/provider/HunterModeSettingsModal.js';
-import MakeOfferModal from '../App components/provider/MakeOfferModal.js'; 
+import StarRating from '../components/ui/StarRating.js';
+import ContextualHelpPanel from '../components/ui/ContextualHelpPanel.js';
+import HeatmapPlaceholder, { generateMockHeatmapTiles } from '../components/provider/HeatmapPlaceholder.js';
+import ManageDocumentsModal from '../components/provider/ManageDocumentsModal.js';
+import PayoutSettingsModal from '../components/provider/PayoutSettingsModal.js'; 
+import SetWorkDestinationModal from '../components/provider/SetWorkDestinationModal.js'; 
+import ManageDailyRoutesModal from '../components/provider/ManageDailyRoutesModal.js';
+import ProductScanModal from '../components/provider/ProductScanModal.js'; 
+import HunterModeSettingsModal from '../components/provider/HunterModeSettingsModal.js';
+import MakeOfferModal from '../components/provider/MakeOfferModal.js'; 
 import { useAuth } from '../contexts/AuthContext.js';
 import { useToast } from '../contexts/ToastContext.js';
 import { useNotifications } from '../contexts/NotificationContext.js'; 
 
-import OnboardingTour from '../App components/ui/OnboardingTour.js';
+import OnboardingTour from '../components/ui/OnboardingTour.js';
 
 const mockEarningsData: EarningDataPoint[] = [ { date: 'Mon', earnings: 120 }, { date: 'Tue', earnings: 180 }, { date: 'Wed', earnings: 90 }, { date: 'Thu', earnings: 210 }, { date: 'Fri', earnings: 150 }, { date: 'Sat', earnings: 300 }, { date: 'Sun', earnings: 250 },];
 const mockIncomingRequestsSpecificToProvider: RequestData[] = [ 
@@ -208,7 +208,7 @@ const ProviderPortalPage: React.FC = () => {
   useSaveToLocalStorage('hunter_mode_settings', hunterModeSettings, user, isProfileLoading, getLocalStorageKey);
 
 
-  const findAndDisplayHuntedRequests = useCallback(async () => { if (!user || !isOnline || !hunterModeSettings.isEnabled) { setHuntedRequests([]); return; } setIsFindingHuntedRequests(true); try { const mockProviderLocation: GeoLocation = user.workDestination || { lat: 37.7749, lng: -122.4194, address: "Provider's Current Mock Location" }; const found = await providerService.findNearbyRequests(mockProviderLocation, hunterModeSettings); setHuntedRequests(found.map(r => ({ ...r, isHuntedRequest: true }))); if(found.length > 0) { addToast(`${found.length} nearby opportunities found via Hunter Mode.`, 'info'); const hunterNotifTimeout = window.setTimeout(() => { addNotification(`Hunter Mode: New opportunity - "${found[0].textInput?.substring(0,25)}..."`, 'new_request', `/provider-portal?requestId=${found[0].id}`, found[0].id); }, 5000); simulatedNotificationTimeouts.current.push(hunterNotifTimeout as unknown as number); }} catch (error) { addToast('Error finding hunted requests.', 'error'); console.error("Error in findAndDisplayHuntedRequests:", error); } finally { setIsFindingHuntedRequests(false); }}, [user, isOnline, hunterModeSettings, addToast, addNotification]); 
+  const findAndDisplayHuntedRequests = useCallback(async () => { if (!user || !isOnline || !hunterModeSettings.isEnabled) { setHuntedRequests([]); return; } setIsFindingHuntedRequests(true); try { const mockProviderLocation: GeoLocation = user.workDestination || (user.location || { lat: 37.7749, lng: -122.4194, address: "Provider's Current Mock Location" }); const found = await providerService.findNearbyRequests(mockProviderLocation, hunterModeSettings); setHuntedRequests(found.map(r => ({ ...r, isHuntedRequest: true }))); if(found.length > 0) { addToast(`${found.length} nearby opportunities found via Hunter Mode.`, 'info'); const hunterNotifTimeout = window.setTimeout(() => { addNotification(`Hunter Mode: New opportunity - "${found[0].textInput?.substring(0,25)}..."`, 'new_request', `/provider-portal?requestId=${found[0].id}`, found[0].id); }, 5000); simulatedNotificationTimeouts.current.push(hunterNotifTimeout as unknown as number); }} catch (error) { addToast('Error finding hunted requests.', 'error'); console.error("Error in findAndDisplayHuntedRequests:", error); } finally { setIsFindingHuntedRequests(false); }}, [user, isOnline, hunterModeSettings, addToast, addNotification]); 
   useEffect(() => { if (hunterModeSettings.isEnabled && isOnline) { findAndDisplayHuntedRequests(); const intervalId = setInterval(findAndDisplayHuntedRequests, 60000); return () => clearInterval(intervalId); } else { setHuntedRequests([]); }}, [hunterModeSettings.isEnabled, isOnline, findAndDisplayHuntedRequests]);
   const handleToggleHunterMode = () => { if (!user) return; const newIsEnabled = !hunterModeSettings.isEnabled; const newSettings = { ...hunterModeSettings, isEnabled: newIsEnabled }; setHunterModeSettings(newSettings); userDataService.saveHunterModeSettings(user.id, newSettings); addToast(`Hunter Mode ${newIsEnabled ? 'Enabled' : 'Disabled'}.`, 'info'); if (!newIsEnabled) setHuntedRequests([]); };
   const handleSaveHunterSettings = (settings: HunterModeSettings) => { if (!user) return; setHunterModeSettings(settings); userDataService.saveHunterModeSettings(user.id, settings); addToast('Hunter Mode settings saved!', 'success'); setIsHunterModeSettingsModalOpen(false); };
@@ -247,7 +247,19 @@ const ProviderPortalPage: React.FC = () => {
   const handleDeletePayoutAccount = async (accountId: string) => { if(!user) return; if(myPayoutAccounts.find(acc => acc.id === accountId && acc.isPrimary) && myPayoutAccounts.length > 1) {addToast("Cannot delete primary account if others exist.", "error"); return;} await userDataService.deletePayoutAccount(user.id, accountId); setMyPayoutAccounts(prev => prev.filter(acc => acc.id !== accountId)); addToast("Payout account deleted.", "info");};
   const handleRequestPayout = async (amount: number, accountId: string) => { if(!user){addToast("Must be logged in.","error");return;} const account = myPayoutAccounts.find(a => a.id === accountId); if(!account) {addToast("Payout account not found.", "error"); return;} const newEntry = await userDataService.requestPayout(user.id, amount, accountId); setMyPayoutHistory(prev => [newEntry, ...prev]); setMyMockBalance(prev => prev - amount); addToast(`Payout of $${amount.toFixed(2)} requested to ${newEntry.destination}.`, "success");};
   const handleSetWorkDestination = async (address: string) => { if(!user) { addToast("User not found.", "error"); return; } if (!address) { await userDataService.saveProviderWorkDestination(user.id, null); setWorkDestination(null); addToast("Work destination cleared.", "info"); return; } const newDestination: GeoLocation = userDataService.createGeoLocationFromString(address); await userDataService.saveProviderWorkDestination(user.id, newDestination); setWorkDestination(newDestination); addToast("Work destination set!", "success");};
-  const handleSaveRoute = async (route: DailyRoutineRoute) => { if(!user) return; const savedRoute = await userDataService.saveDailyRoutineRoute(user.id, route); setMyDailyRoutes(prev => prev.map(r => r.id === savedRoute.id ? savedRoute : r)); if(!routes.find(r => r.id === savedRoute.id)) setMyDailyRoutes(prev => [...prev, savedRoute]); addToast("Route saved!", "success"); };
+  const handleSaveRoute = async (route: DailyRoutineRoute) => { 
+    if(!user) return; 
+    const savedRoute = await userDataService.saveDailyRoutineRoute(user.id, route); 
+    setMyDailyRoutes(prev => {
+        const routeExists = prev.some(r => r.id === savedRoute.id);
+        if (routeExists) {
+            return prev.map(r => r.id === savedRoute.id ? savedRoute : r);
+        } else {
+            return [...prev, savedRoute];
+        }
+    });
+    addToast("Route saved!", "success"); 
+  };
   const handleDeleteRoute = async (routeId: string) => { if (!user) return; await userDataService.deleteDailyRoutineRoute(user.id, routeId); setMyDailyRoutes(prev => prev.filter(r => r.id !== routeId)); addToast("Route deleted.", "info"); };
   const handleOpenScanModal = () => setIsProductScanModalOpen(true);
   const handleProductDetailsFromScan = (details: Partial<Product>) => { setMyProducts(prev => [...prev, { ...details, id:`prod-scan-${Date.now()}`, providerId: user!.id, photos: details.photos || [], stock: details.stock || 0, price: details.price || 0, name: details.name || "Scanned Product", description: details.description || "Details from scan." } as Product]); setIsProductScanModalOpen(false); addToast("Product details added from scan/image!", "success"); };

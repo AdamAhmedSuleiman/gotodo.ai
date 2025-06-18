@@ -3,7 +3,7 @@
 // Helper function to wait for the Google Maps API to be loaded
 export const waitForMapsApiToLoad = (): Promise<void> => {
   return new Promise((resolve, reject) => {
-    if ((window as any).googleMapsApiLoaded && window.google && window.google.maps) {
+    if (window.googleMapsApiLoaded && window.google && window.google.maps) {
       console.log("[MapService] Google Maps API already loaded.");
       resolve();
       return;
@@ -36,6 +36,9 @@ export const waitForMapsApiToLoad = (): Promise<void> => {
 export const initMap = async (mapDiv: HTMLElement, options: google.maps.MapOptions): Promise<google.maps.Map | null> => {
   try {
     await waitForMapsApiToLoad();
+    if (!window.google || !window.google.maps || !window.google.maps.Map) {
+        throw new Error("Google Maps 'Map' constructor not found after API load.");
+    }
     return new window.google.maps.Map(mapDiv, options);
   } catch (error) {
     console.error("[MapService] Error initializing map:", error);
@@ -44,8 +47,8 @@ export const initMap = async (mapDiv: HTMLElement, options: google.maps.MapOptio
 };
 
 export const addMarker = (map: google.maps.Map, position: google.maps.LatLngLiteral, title?: string): google.maps.marker.AdvancedMarkerElement | null => {
-  if (!window.google?.maps?.marker) {
-    console.error("[MapService] Google Maps Marker library (google.maps.marker) not loaded. Ensure 'marker' library is included in API script.");
+  if (!window.google?.maps?.marker?.AdvancedMarkerElement) {
+    console.error("[MapService] Google Maps AdvancedMarkerElement (google.maps.marker.AdvancedMarkerElement) not loaded. Ensure 'marker' library is included in API script.");
     return null;
   }
   return new window.google.maps.marker.AdvancedMarkerElement({
@@ -59,6 +62,9 @@ export const getDirections = async (
   request: google.maps.DirectionsRequest
 ): Promise<google.maps.DirectionsResult> => { 
   await waitForMapsApiToLoad();
+  if (!window.google || !window.google.maps || !window.google.maps.DirectionsService || !window.google.maps.DirectionsStatus) {
+    throw new Error("Google Maps DirectionsService or DirectionsStatus not found after API load.");
+  }
   const directionsService = new window.google.maps.DirectionsService();
   return new Promise((resolve, reject) => {
     directionsService.route(request, (result, status) => {
@@ -74,6 +80,9 @@ export const getDirections = async (
 
 export const geocodeAddress = async (address: string): Promise<google.maps.GeocoderResult[]> => { 
   await waitForMapsApiToLoad();
+  if (!window.google || !window.google.maps || !window.google.maps.Geocoder || !window.google.maps.GeocoderStatus) {
+    throw new Error("Google Maps Geocoder or GeocoderStatus not found after API load.");
+  }
   const geocoder = new window.google.maps.Geocoder();
   return new Promise((resolve, reject) => {
       geocoder.geocode({ address }, (results, status) => {

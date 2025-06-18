@@ -1,15 +1,14 @@
-
 // src/pages/RegistrationPage.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.js'; 
 import { useToast } from '../contexts/ToastContext.js';
-import { UserRole, User } from '../src/types.js'; 
-import Input from '../App components/ui/Input.js'; 
-import Button from '../App components/ui/Button.js'; 
-import { APP_NAME, ICON_PATHS } from '../src/constants.js'; 
-import Icon from '../App components/ui/Icon.js'; 
-import FaceIDSetupModal from '../App components/auth/FaceIDSetupModal.js';
+import { UserRole, User } from '../types.js'; 
+import Input from '../components/ui/Input.js'; 
+import Button from '../components/ui/Button.js'; 
+import { APP_NAME, ICON_PATHS } from '../constants.js'; 
+import Icon from '../components/ui/Icon.js'; 
+import FaceIDSetupModal from '../components/auth/FaceIDSetupModal.js';
 
 const RegistrationPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -34,23 +33,24 @@ const RegistrationPage: React.FC = () => {
       return;
     }
     try {
-      await register(name, email, password, role); 
-      
-      const currentRegisteredUser = authUserFromContext; 
-      if (currentRegisteredUser) {
-        setRegisteredUserForFaceID(currentRegisteredUser);
-        setIsFaceIDModalOpen(true);
-        addToast("Registration successful! Please set up Face ID.", "success");
-      } else {
-        setError("Registration succeeded, but user data is not available for Face ID setup.");
-        addToast("Registration error. User data not available.", "error");
-      }
-
+      await register(name, email, password, role);
+      // AuthProvider's useEffect will update authUserFromContext, which triggers the below useEffect
     } catch (err) {
       setError((err as Error).message || 'Failed to register. Please try again.');
       addToast((err as Error).message || 'Failed to register.', "error");
     }
   };
+  
+  // Effect to run after authUserFromContext might have been updated
+  useEffect(() => {
+    if (authUserFromContext && authUserFromContext.email === email && !isFaceIDModalOpen && !isLoading && !registeredUserForFaceID) {
+      // Check !registeredUserForFaceID to prevent re-opening if modal was closed manually or due to other reasons
+      setRegisteredUserForFaceID(authUserFromContext);
+      setIsFaceIDModalOpen(true);
+      addToast("Registration successful! Please set up Face ID.", "success");
+    }
+  }, [authUserFromContext, email, isFaceIDModalOpen, isLoading, addToast, registeredUserForFaceID]);
+
 
   const handleFaceIDSetupComplete = () => {
     if (registeredUserForFaceID) { 
@@ -61,6 +61,7 @@ const RegistrationPage: React.FC = () => {
 
   const handleFaceIDModalClose = () => {
     setIsFaceIDModalOpen(false);
+    setRegisteredUserForFaceID(null); // Clear this to allow re-trigger if needed (though unlikely in this flow)
     navigate('/'); 
   };
 

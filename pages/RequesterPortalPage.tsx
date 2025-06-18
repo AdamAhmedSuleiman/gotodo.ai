@@ -1,7 +1,7 @@
 // src/pages/RequesterPortalPage.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
-import RequestForm from '../App components/request/RequestForm.js';
+import { useLocation, useNavigate } from 'react-router-dom';
+import RequestForm from '../components/request/RequestForm.js';
 import { 
     RequestData, ServiceType, AIAnalysisResult, GeoLocation, Review, 
     MockProviderBid, RequestStatus, DisputeDetails, RecipientDetails, 
@@ -9,17 +9,17 @@ import {
     ChatMessage, User, JourneyPlan, JourneyStop, JourneyAction, StopActionType,
     ConfigureStopActionModalProps, PickupPersonActionDetails, PickupItemActionDetails, 
     AssignTaskActionDetails, DropoffPersonActionDetails, DropoffItemActionDetails
-} from '../src/types.js'; 
-import Icon from '../App components/ui/Icon.js'; 
-import { ICON_PATHS, APP_NAME } from '../src/constants.js'; 
-import MapDisplay from '../App components/map/MapDisplay.js'; 
-import Button from '../App components/ui/Button.js'; 
-import Input from '../App components/ui/Input.js'; 
-import Textarea from '../App components/ui/Textarea.js'; 
-import LeaveReviewModal from '../App components/request/LeaveReviewModal.js';
-import StarRating from '../App components/ui/StarRating.js'; 
-import ContextualHelpPanel from '../App components/ui/ContextualHelpPanel.js'; 
-import LoadingSpinner from '../App components/ui/LoadingSpinner.js'; 
+} from '../types.js'; 
+import Icon from '../components/ui/Icon.js'; 
+import { ICON_PATHS, APP_NAME } from '../constants.js'; 
+import MapDisplay from '../components/map/MapDisplay.js'; 
+import Button from '../components/ui/Button.js'; 
+import Input from '../components/ui/Input.js'; 
+import Textarea from '../components/ui/Textarea.js'; 
+import LeaveReviewModal from '../components/request/LeaveReviewModal.js';
+import StarRating from '../components/ui/StarRating.js'; 
+import ContextualHelpPanel from '../components/ui/ContextualHelpPanel.js'; 
+import LoadingSpinner from '../components/ui/LoadingSpinner.js'; 
 import { analyzeRequestWithGemini, getDynamicPriceSuggestion } from '../services/geminiService.js'; 
 import * as mapService from '../services/mapService.js'; 
 import * as providerService from '../services/providerService.js'; 
@@ -28,16 +28,16 @@ import * as taskService from '../services/taskService.js';
 import { useAuth } from '../contexts/AuthContext.js'; 
 import { useToast } from '../contexts/ToastContext.js';
 import { useNotifications } from '../contexts/NotificationContext.js'; 
-import ViewBidsModal from '../App components/request/ViewBidsModal.js';
-import ProviderProfileViewModal from '../App components/requester/ProviderProfileViewModal.js'; 
-import OnboardingTour from '../App components/ui/OnboardingTour.js'; 
-import RequestStatusTimeline from '../App components/request/RequestStatusTimeline.js';
-import ReportIssueModal from '../App components/request/ReportIssueModal.js';
-import PaymentModal from '../App components/request/PaymentModal.js'; 
-import SelectionInfoPanel from '../App components/map/SelectionInfoPanel.js'; 
-import ChatModal from '../App components/shared/ChatModal.js';
-import JourneyPlannerPanel from '../App components/journey/JourneyPlannerPanel.js';
-import ConfigureStopActionModal from '../App components/journey/ConfigureStopActionModal.js';
+import ViewBidsModal from '../components/request/ViewBidsModal.js';
+import ProviderProfileViewModal from '../components/requester/ProviderProfileViewModal.js'; 
+import OnboardingTour from '../components/ui/OnboardingTour.js'; 
+import RequestStatusTimeline from '../components/request/RequestStatusTimeline.js';
+import ReportIssueModal from '../components/request/ReportIssueModal.js';
+import PaymentModal from '../components/request/PaymentModal.js'; 
+import SelectionInfoPanel from '../components/map/SelectionInfoPanel.js'; 
+import ChatModal from '../components/shared/ChatModal.js';
+import JourneyPlannerPanel from '../components/journey/JourneyPlannerPanel.js';
+import ConfigureStopActionModal from '../components/journey/ConfigureStopActionModal.js';
 
 const mockPastRequests: RequestData[] = [ { id: 'req1', requesterId: 'user1', type: ServiceType.RIDE_DELIVERY, textInput: 'Ride to airport', status: RequestStatus.COMPLETED, creationDate: '2023-10-15', suggestedPrice: 25, providerId: 'prov1', assignedProviderName: 'Speedy Rides', origin: {lat: 37.7749, lng: -122.4194, address: "Home"}, destination: {lat: 37.6213, lng: -122.3790, address:"SFO Airport"}, requestFor: 'self', earnedAmount: 20 }, ];
 const defaultMapCenter: google.maps.LatLngLiteral = { lat: 37.7749, lng: -122.4194 };
@@ -50,6 +50,7 @@ const RequesterPortalPage: React.FC = () => {
   const { addToast } = useToast();
   const { addNotification } = useNotifications(); 
   const locationHook = useLocation();
+  const navigate = useNavigate();
 
   const [isJourneyPlanningMode, setIsJourneyPlanningMode] = useState(false);
   const [currentJourneyPlan, setCurrentJourneyPlan] = useState<JourneyPlan | null>(null);
@@ -95,8 +96,27 @@ const RequesterPortalPage: React.FC = () => {
   const [currentActionType, setCurrentActionType] = useState<StopActionType | null>(null);
   const [existingActionToEdit, setExistingActionToEdit] = useState<JourneyAction | undefined>(undefined);
 
+  // For simulated notifications
+  const simulatedNotificationTimeouts = useRef<number[]>([]);
+
+  useEffect(() => {
+    // Cleanup timeouts on unmount
+    return () => {
+      simulatedNotificationTimeouts.current.forEach(clearTimeout);
+    };
+  }, []);
+
+
   useEffect(() => { localStorage.setItem(`gotodo_requester_tasks_${user?.id || 'default'}`, JSON.stringify(activeRequests)); }, [activeRequests, user?.id]);
-  useEffect(() => { if (user) { setSavedPlaces(userDataService.getSavedPlaces(user.id)); setSavedMembers(userDataService.getSavedMembers(user.id)); } }, [user]);
+  useEffect(() => { 
+    const loadInitialUserData = async () => {
+      if (user) { 
+        setSavedPlaces(await userDataService.getSavedPlaces(user.id)); 
+        setSavedMembers(await userDataService.getSavedMembers(user.id)); 
+      }
+    };
+    loadInitialUserData();
+  }, [user]);
   
   useEffect(() => {
     if (isJourneyPlanningMode && currentJourneyPlan) {
@@ -124,10 +144,6 @@ const RequesterPortalPage: React.FC = () => {
         if (journeyStopMarkers.length > 0 && window.google?.maps?.LatLngBounds) { 
             const bounds = new window.google.maps.LatLngBounds();
             journeyStopMarkers.forEach(marker => bounds.extend(marker.position));
-            // if (mapInstance) mapInstance.fitBounds(bounds); // Already commented out
-            // Simple centering on the first stop, could be improved to fit bounds
-            // setMapCenter(journeyStopMarkers[0].position); 
-            // if (journeyStopMarkers.length > 1) setMapZoom(10); else setMapZoom(14);
         }
     } else if (!isJourneyPlanningMode) {
         const singleRequestMarkers: MapMarkerData[] = [];
@@ -223,7 +239,7 @@ const RequesterPortalPage: React.FC = () => {
     });
   };
 
-  const removeJourneyStop = (stopId: string) => {
+  const handleRemoveJourneyStop = (stopId: string) => { 
     setCurrentJourneyPlan(prevPlan => {
       if (!prevPlan || prevPlan.stops.length <= 2) { 
         addToast("Cannot remove origin or final destination if only two stops exist.", "warning");
@@ -300,7 +316,6 @@ const RequesterPortalPage: React.FC = () => {
        }
     }
 
-
     setIsFinalizingJourney(true);
     addToast("Finalizing Journey... This may take a moment.", "info");
     
@@ -369,12 +384,13 @@ const RequesterPortalPage: React.FC = () => {
             break;
         }
         
-        const requestDetailsForAI = {
+        const requestDetailsForAI: Pick<RequestData, 'textInput' | 'imageB64Data' | 'hasAudio' | 'hasVideo' | 'numUploadedMedia' | 'origin' | 'destination' | 'requestFor' | 'recipientDetails' | 'targetMapLocation'> & { taskContext?: string } = {
             textInput,
             origin: stop.location,
             destination: destinationForAction,
             requestFor: requestForField,
-            recipientDetails: recipientDetailsForAction
+            recipientDetails: recipientDetailsForAction,
+            taskContext: `Journey: ${currentJourneyPlan.title}`,
         };
         
         newRequestsPromises.push(
@@ -389,7 +405,7 @@ const RequesterPortalPage: React.FC = () => {
               const finalSummary = aiAnalysis.summary || textInput;
 
               addToast(`Sub-request: "${finalSummary.substring(0,30)}..." created.`, "success");
-              return {
+              const subRequest: RequestData = {
                 id: `req-${generateId()}`,
                 requesterId: user.id,
                 status: RequestStatus.PENDING,
@@ -406,16 +422,24 @@ const RequesterPortalPage: React.FC = () => {
                 journeyActionId: action.id,
                 requestFor: requestForField, 
                 recipientDetails: recipientDetailsForAction,
-              } as RequestData;
+                taskProjectId: currentJourneyPlan.id, 
+                taskSubItemId: action.id, 
+                taskContext: requestDetailsForAI.taskContext,
+              };
+              taskService.addRequestToPublicPool(subRequest); 
+              return subRequest;
             } catch (err) {
               console.error(`AI analysis failed for journey sub-task "${action.type}" at "${stop.name}", creating with basic details. Error:`, err);
               addToast(`AI failed for "${action.type.replace(/_/g, ' ')}". Creating basic request.`, "warning");
-              return {
+              const basicSubRequest: RequestData = {
                 id: `req-${generateId()}`,
                 requesterId: user.id, status: RequestStatus.PENDING, creationDate: new Date().toISOString(),
                 textInput, type: serviceType, origin: stop.location, destination: destinationForAction,
                 aiExtractedEntities: baseEntities, journeyPlanId: currentJourneyPlan.id, journeyStopId: stop.id, journeyActionId: action.id, requestFor: requestForField, recipientDetails: recipientDetailsForAction,
-              } as RequestData;
+                taskProjectId: currentJourneyPlan.id, taskSubItemId: action.id, taskContext: requestDetailsForAI.taskContext,
+              };
+              taskService.addRequestToPublicPool(basicSubRequest); 
+              return basicSubRequest;
             }
           })()
         );
@@ -445,26 +469,68 @@ const RequesterPortalPage: React.FC = () => {
 
 
   const isValidGeoLocation = (loc: any): loc is GeoLocation => { return loc && typeof loc.lat === 'number' && typeof loc.lng === 'number'; };
-  const processNewRequest = ( baseRequestDetails: Partial<Omit<RequestData, 'id' | 'requesterId' | 'status' | 'creationDate'>>, aiAnalysis?: AIAnalysisResult ) => { const newRequest: RequestData = { id: `req-${Date.now()}`, requesterId: user.id, status: RequestStatus.PENDING, creationDate: new Date().toISOString(), ...baseRequestDetails, type: baseRequestDetails.type || aiAnalysis?.type || ServiceType.UNKNOWN, suggestedPrice: baseRequestDetails.suggestedPrice ?? aiAnalysis?.priceSuggestion, aiAnalysisSummary: baseRequestDetails.aiAnalysisSummary || aiAnalysis?.summary, aiExtractedEntities: baseRequestDetails.aiExtractedEntities || aiAnalysis?.entities, requestFor: baseRequestDetails.requestFor || 'self', } as RequestData; setActiveRequests(prev => [newRequest, ...prev].sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime())); setLastAISummary(newRequest.aiAnalysisSummary || "Request processed."); setIsRequestSubmitted(true); addToast("New single request submitted successfully!", "success"); addNotification("Your new request has been submitted.", "info", `/requester-portal`); };
-  const handleRequestSubmitFromForm = async ( requestDetailsForAI: Pick<RequestData, 'textInput' | 'imageB64Data' | 'hasAudio' | 'hasVideo' | 'numUploadedMedia' | 'origin' | 'destination' | 'requestFor' | 'recipientDetails' | 'targetMapLocation'>, aiAnalysis: AIAnalysisResult ) => { const baseRequestDetails: Partial<Omit<RequestData, 'id' | 'requesterId' | 'status' | 'creationDate'>> = { textInput: requestDetailsForAI.textInput, imageB64Data: requestDetailsForAI.imageB64Data, hasAudio: requestDetailsForAI.hasAudio, hasVideo: requestDetailsForAI.hasVideo, numUploadedMedia: requestDetailsForAI.numUploadedMedia, requestFor: requestFor, recipientDetails: requestFor === 'someone_else' ? recipientDetails : undefined, origin: origin || undefined, destination: destination || undefined, targetMapLocation: requestDetailsForAI.targetMapLocation, type: aiAnalysis.type, suggestedPrice: aiAnalysis.priceSuggestion, aiAnalysisSummary: aiAnalysis.summary, aiExtractedEntities: aiAnalysis.entities, }; processNewRequest(baseRequestDetails, aiAnalysis); const searchLocation = baseRequestDetails.targetMapLocation || baseRequestDetails.origin || defaultMapCenter; const providers = await providerService.getMockProviders(aiAnalysis.type, searchLocation); setDisplayedProviders(providers); if(providers.length === 0) addToast("No providers found for single request.", "info"); else addToast(`${providers.length} provider(s) found for single request. Check the map!`, "success"); setOrigin(null); setDestination(null); setRecipientDetails({}); setRequestFor('self'); setIsRequestPanelOpen(false); };
-  useEffect(() => { if (locationHook.state?.newRequestFromInteraction) { const { newRequestFromInteraction, aiAnalysis } = locationHook.state as { newRequestFromInteraction: Partial<RequestData>, aiAnalysis?: AIAnalysisResult }; processNewRequest(newRequestFromInteraction, aiAnalysis); window.history.replaceState({}, document.title); } }, [locationHook.state, user?.id]); 
+  const processNewRequest = useCallback(( baseRequestDetails: Partial<Omit<RequestData, 'id' | 'requesterId' | 'status' | 'creationDate'>>, aiAnalysis?: AIAnalysisResult ) => { 
+    if (!user) return;
+    const newRequest: RequestData = { 
+      id: `req-${Date.now()}`, 
+      requesterId: user.id, 
+      status: RequestStatus.PENDING, 
+      creationDate: new Date().toISOString(), 
+      ...baseRequestDetails, 
+      type: baseRequestDetails.type || aiAnalysis?.type || ServiceType.UNKNOWN, 
+      suggestedPrice: baseRequestDetails.suggestedPrice ?? aiAnalysis?.priceSuggestion, 
+      aiAnalysisSummary: baseRequestDetails.aiAnalysisSummary || aiAnalysis?.summary, 
+      aiExtractedEntities: baseRequestDetails.aiExtractedEntities || aiAnalysis?.entities, 
+      requestFor: baseRequestDetails.requestFor || 'self',
+      taskProjectId: baseRequestDetails.taskProjectId, 
+      taskSubItemId: baseRequestDetails.taskSubItemId,
+      taskContext: baseRequestDetails.taskContext,
+    } as RequestData; 
+    setActiveRequests(prev => [newRequest, ...prev].sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime())); 
+    taskService.addRequestToPublicPool(newRequest); 
+    setLastAISummary(newRequest.aiAnalysisSummary || "Request processed."); 
+    setIsRequestSubmitted(true); 
+    addToast("New single request submitted successfully!", "success"); 
+    addNotification("Your new request has been submitted.", "new_request", `/requester-portal?requestId=${newRequest.id}`, newRequest.id); 
+    
+    // Simulate a bid after a short delay
+    const bidTimeout = window.setTimeout(async () => {
+      // Ensure the request still exists and is pending before adding a bid
+      // Instead of checking activeRequests directly, which might be stale due to closure,
+      // we can fetch the current state of the request (or assume for mock)
+      const currentReqStatus = (await taskService.getRequestFromPublicPool(newRequest.id))?.status;
+
+      if (currentReqStatus === RequestStatus.PENDING) {
+        addNotification(`You've received a new bid for your request: "${newRequest.textInput?.substring(0,20)}..."`, 'bid_received', `/requester-portal?requestId=${newRequest.id}`, newRequest.id);
+        const mockBid: MockProviderBid = { providerId: "provider_mock_bidder", providerName: "Speedy Services", providerAvatarUrl: "https://picsum.photos/seed/speedy/50/50", bidAmount: (newRequest.suggestedPrice || 20) * 0.9, message: "I can do this quickly!", timestamp: new Date().toISOString() };
+        const updatedRequestWithBid = {...newRequest, bids: [mockBid], status: RequestStatus.AWAITING_ACCEPTANCE };
+        
+        setActiveRequests(prev => prev.map(r => r.id === newRequest.id ? updatedRequestWithBid : r));
+        taskService.updateRequestInPublicPool(updatedRequestWithBid); 
+      }
+    }, 15000 + Math.random() * 10000); // 15-25 seconds delay
+    simulatedNotificationTimeouts.current.push(bidTimeout as unknown as number); 
+  }, [user, addToast, addNotification, setActiveRequests]);
+  
+  const handleRequestSubmitFromForm = async ( requestDetailsForAI: Pick<RequestData, 'textInput' | 'imageB64Data' | 'hasAudio' | 'hasVideo' | 'numUploadedMedia' | 'origin' | 'destination' | 'requestFor' | 'recipientDetails' | 'targetMapLocation'>, aiAnalysis: AIAnalysisResult ) => { const baseRequestDetails: Partial<Omit<RequestData, 'id' | 'requesterId' | 'status' | 'creationDate'>> = { textInput: requestDetailsForAI.textInput, imageB64Data: requestDetailsForAI.imageB64Data, hasAudio: requestDetailsForAI.hasAudio, hasVideo: requestDetailsForAI.hasVideo, numUploadedMedia: requestDetailsForAI.numUploadedMedia, requestFor: requestFor, recipientDetails: requestFor === 'someone_else' ? recipientDetails : undefined, origin: origin || undefined, destination: destination || undefined, targetMapLocation: requestDetailsForAI.targetMapLocation, type: aiAnalysis.type, suggestedPrice: aiAnalysis.priceSuggestion, aiAnalysisSummary: aiAnalysis.summary, aiExtractedEntities: aiAnalysis.entities, }; processNewRequest(baseRequestDetails, aiAnalysis); const searchLocation = baseRequestDetails.targetMapLocation || baseRequestDetails.origin || defaultMapCenter; const providers = await providerService.getProviders(aiAnalysis.type, searchLocation); setDisplayedProviders(providers); if(providers.length === 0) addToast("No providers found for single request.", "info"); else addToast(`${providers.length} provider(s) found for single request. Check the map!`, "success"); setOrigin(null); setDestination(null); setRecipientDetails({}); setRequestFor('self'); setIsRequestPanelOpen(false); };
+  useEffect(() => { if (locationHook.state?.newRequestFromInteraction) { const { newRequestFromInteraction, aiAnalysis } = locationHook.state as { newRequestFromInteraction: Partial<RequestData>, aiAnalysis?: AIAnalysisResult }; processNewRequest(newRequestFromInteraction, aiAnalysis); window.history.replaceState({}, document.title); } }, [locationHook.state, user?.id, processNewRequest]); 
   const createAnotherRequest = () => { setIsRequestSubmitted(false); setLastAISummary(null); setMapCenter(defaultMapCenter); setMapMarkers([]); setMapZoom(12); setDisplayedProviders([]); setSelectedMapItem(null); setIsSelectionInfoPanelOpen(false); setIsRequestPanelOpen(true); setOrigin(null); setDestination(null); };
   const handleMapMarkerClick = (markerData: MapMarkerData) => { setSelectedMapItem(markerData); setIsSelectionInfoPanelOpen(true); if(markerData.position) { setMapCenter(markerData.position); setMapZoom(15); }};
   const closeSelectionInfoPanel = () => setIsSelectionInfoPanelOpen(false);
   const openReviewModal = (request: RequestData) => { setRequestToReview(request); setIsReviewModalOpen(true); };
   const handleReviewSubmit = (rating: number, text: string) => { if (!requestToReview) return; const newReview: Review = { rating, text, date: new Date().toISOString(), reviewerName: user?.name || "Requester" }; setActiveRequests(prevRequests => prevRequests.map(req => req.id === requestToReview.id ? { ...req, review: newReview } : req ).sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime())); setIsReviewModalOpen(false); setRequestToReview(null); addToast("Review submitted successfully! Thank you.", "success"); };
   const openReportIssueModal = (request: RequestData) => { setRequestToReport(request); setIsReportIssueModalOpen(true); };
-  const handleReportIssueSubmit = (reason: string, description: string) => { if (!requestToReport) return; const newDisputeDetails: DisputeDetails = { reason, description, reportedDate: new Date().toISOString(),}; setActiveRequests(prevRequests => prevRequests.map(req => req.id === requestToReport.id ? { ...req, status: RequestStatus.DISPUTED, disputeDetails: newDisputeDetails } : req ).sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime())); addToast(`Issue reported for request: ${requestToReport.id.substring(0,6)}. Status set to Disputed.`, "warning"); addNotification(`Your reported issue for task ${requestToReport.id.substring(0,6)} is under review.`, "warning"); setIsReportIssueModalOpen(false); setRequestToReport(null); };
+  const handleReportIssueSubmit = (reason: string, description: string) => { if (!requestToReport) return; const newDisputeDetails: DisputeDetails = { reason, description, reportedDate: new Date().toISOString(),}; setActiveRequests(prevRequests => prevRequests.map(req => req.id === requestToReport.id ? { ...req, status: RequestStatus.DISPUTED, disputeDetails: newDisputeDetails } : req ).sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime())); addToast(`Issue reported for request: ${requestToReport.id.substring(0,6)}. Status set to Disputed.`, "warning"); addNotification(`Your reported issue for task ${requestToReport.id.substring(0,6)} is under review.`, "warning", `/requester-portal?requestId=${requestToReport.id}`, requestToReport.id); setIsReportIssueModalOpen(false); setRequestToReport(null); };
   const openPaymentModal = (request: RequestData) => { setRequestForPayment(request); setIsPaymentModalOpen(true); };
-  const handlePaymentSuccess = () => { if (!requestForPayment) return; const earned = taskService.recordEarnedAmount(requestForPayment); setActiveRequests(prevRequests => prevRequests.map(req => req.id === requestForPayment.id ? { ...req, status: RequestStatus.COMPLETED, earnedAmount: earned } : req ).sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime())); addToast(`Payment for request ${requestForPayment.id.substring(0,6)} successful. Task Completed!`, "success"); addNotification(`Your payment for task ${requestForPayment.id.substring(0,6)} was successful.`, "success"); setIsPaymentModalOpen(false); setRequestForPayment(null); };
+  const handlePaymentSuccess = () => { if (!requestForPayment) return; const earned = taskService.recordEarnedAmount(requestForPayment); setActiveRequests(prevRequests => prevRequests.map(req => req.id === requestForPayment.id ? { ...req, status: RequestStatus.COMPLETED, earnedAmount: earned } : req ).sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime())); addToast(`Payment for request ${requestForPayment.id.substring(0,6)} successful. Task Completed!`, "success"); addNotification(`Your payment for task ${requestForPayment.id.substring(0,6)} was successful.`, "payment_update", `/requester-portal?requestId=${requestForPayment.id}`, requestForPayment.id); setIsPaymentModalOpen(false); setRequestForPayment(null); };
   const getStatusColor = (status: RequestStatus): string => { switch (status) { case RequestStatus.PENDING: return 'border-yellow-500 dark:border-yellow-400 text-yellow-600 dark:text-yellow-400'; case RequestStatus.AWAITING_ACCEPTANCE: return 'border-orange-500 dark:border-orange-400 text-orange-600 dark:text-orange-400'; case RequestStatus.PROVIDER_ASSIGNED: return 'border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'; case RequestStatus.EN_ROUTE: return 'border-cyan-500 dark:border-cyan-400 text-cyan-600 dark:text-cyan-400'; case RequestStatus.SERVICE_IN_PROGRESS: return 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'; case RequestStatus.PENDING_PAYMENT: return 'border-purple-500 dark:border-purple-400 text-purple-600 dark:text-purple-400'; case RequestStatus.COMPLETED: return 'border-green-500 dark:border-green-400 text-green-600 dark:text-green-400'; case RequestStatus.CANCELLED: return 'border-red-500 dark:border-red-400 text-red-600 dark:text-red-400'; case RequestStatus.DISPUTED: return 'border-pink-500 dark:border-pink-400 text-pink-600 dark:text-pink-400'; default: return 'border-gray-500 dark:border-gray-400 text-gray-600 dark:text-gray-400'; } };
   const formatStatusText = (status: RequestStatus) => status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   const handleGetRefinedPrice = async (request: RequestData) => { if (!request.type || !request.aiAnalysisSummary) { setRefinedPrices(prev => ({ ...prev, [request.id]: { loading: false, error: "Missing data for refined price."}})); addToast("Missing data for refined price calculation.", "error"); return; } setRefinedPrices(prev => ({ ...prev, [request.id]: { loading: true }})); try { const price = await getDynamicPriceSuggestion(request.type, request.aiAnalysisSummary, request.aiExtractedEntities || {}); setRefinedPrices(prev => ({ ...prev, [request.id]: { price, loading: false }})); addToast(`Refined price suggestion: $${price.toFixed(2)}`, "success"); } catch (err) { setRefinedPrices(prev => ({ ...prev, [request.id]: { loading: false, error: (err as Error).message }})); addToast("Failed to get refined price.", "error"); }};
   const openViewBidsModal = (request: RequestData) => { setRequestForBids(request); setIsViewBidsModalOpen(true); };
-  const handleAcceptBid = (bid: MockProviderBid) => { if(requestForBids) { setActiveRequests(prev => prev.map(r => r.id === requestForBids.id ? { ...r, status: RequestStatus.PROVIDER_ASSIGNED, providerId: bid.providerId, assignedProviderName: bid.providerName, suggestedPrice: bid.bidAmount } : r ).sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime())); addToast(`Bid from ${bid.providerName} accepted! Provider assigned.`, "success"); addNotification(`Provider ${bid.providerName} is assigned to your task: ${requestForBids.id.substring(0,6)}`, "success", `/requester-portal`); } setIsViewBidsModalOpen(false); setRequestForBids(null); };
-  const handleCancelRequest = (requestId: string) => { let requestCancelled = false; setActiveRequests(prevRequests => prevRequests.map(req => { if (req.id === requestId && (req.status === RequestStatus.PENDING || req.status === RequestStatus.AWAITING_ACCEPTANCE || req.status === RequestStatus.PROVIDER_ASSIGNED)) { requestCancelled = true; return { ...req, status: RequestStatus.CANCELLED }; } return req; }).sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime())); if (requestCancelled) { addToast("Request cancelled.", "info"); addNotification(`Your request ${requestId.substring(0,6)} has been cancelled.`, "info"); } else { addToast("Cannot cancel request at its current stage.", "warning");}};
-  const handleOpenChat = (request: RequestData) => { setCurrentChatRequest(request); setIsChatModalOpen(true); };
-  const handleSendMessage = (requestId: string, message: ChatMessage) => { taskService.addChatMessage(requestId, message); setActiveRequests(prev => prev.map(r => r.id === requestId ? {...r, chatMessages: taskService.getChatMessages(requestId)} : r)); addToast("Message sent (mock)!", "info"); };
+  const handleAcceptBid = (bid: MockProviderBid) => { if(requestForBids) { setActiveRequests(prev => prev.map(r => r.id === requestForBids.id ? { ...r, status: RequestStatus.PROVIDER_ASSIGNED, providerId: bid.providerId, assignedProviderName: bid.providerName, suggestedPrice: bid.bidAmount } : r ).sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime())); addToast(`Bid from ${bid.providerName} accepted! Provider assigned.`, "success"); addNotification(`Provider ${bid.providerName} is assigned to your task: ${requestForBids.id.substring(0,6)}`, "task_update", `/requester-portal?requestId=${requestForBids.id}`, requestForBids.id); } setIsViewBidsModalOpen(false); setRequestForBids(null); };
+  const handleCancelRequest = (requestId: string) => { let requestCancelled = false; setActiveRequests(prevRequests => prevRequests.map(req => { if (req.id === requestId && (req.status === RequestStatus.PENDING || req.status === RequestStatus.AWAITING_ACCEPTANCE || req.status === RequestStatus.PROVIDER_ASSIGNED)) { requestCancelled = true; return { ...req, status: RequestStatus.CANCELLED }; } return req; }).sort((a,b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime())); if (requestCancelled) { addToast("Request cancelled.", "info"); addNotification(`Your request ${requestId.substring(0,6)} has been cancelled.`, "task_update", `/requester-portal?requestId=${requestId}`, requestId); } else { addToast("Cannot cancel request at its current stage.", "warning");}};
+  const handleOpenChat = async (request: RequestData) => { setCurrentChatRequest({...request, chatMessages: await taskService.getChatMessages(request.id)}); setIsChatModalOpen(true); };
+  const handleSendMessage = async (requestId: string, message: ChatMessage) => { await taskService.addChatMessage(requestId, message); setActiveRequests(prev => prev.map(r => r.id === requestId ? {...r, chatMessages: taskService.getChatMessages(requestId)} : r)); addToast("Message sent!", "info"); };
   const handleViewProviderProfile = async (providerId: string) => { const profile = await providerService.getProviderProfileById(providerId); if (profile) { setProviderToView(profile); setIsProviderProfileModalOpen(true); } else { addToast("Could not load provider profile.", "error"); }};
 
   const journeyPathForMap = currentJourneyPlan?.stops.filter(s => s.location).map(s => s.location!) || [];
@@ -499,7 +565,7 @@ const RequesterPortalPage: React.FC = () => {
                 journeyPlan={currentJourneyPlan}
                 onUpdateStop={updateJourneyStop}
                 onAddStop={addJourneyStop}
-                onRemoveStop={removeJourneyStop}
+                onRemoveStop={handleRemoveJourneyStop}
                 onConfigureAction={openStopActionModal}
                 onFinalizeJourney={handleFinalizeJourney}
                 isFinalizingJourney={isFinalizingJourney}
@@ -515,6 +581,7 @@ const RequesterPortalPage: React.FC = () => {
             <div className="mt-6 space-y-2">
                  <Button type="button" onClick={createAnotherRequest} variant="primary"> Create Single Request </Button> 
                  <Button type="button" onClick={initializeNewJourneyPlan} variant="secondary" className="dark:bg-gray-600 dark:hover:bg-gray-500"> Plan New Journey </Button>
+                 <Button type="button" onClick={() => navigate('/task-portal')} variant="outline" className="dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700" leftIcon={<Icon path={ICON_PATHS.VIEW_BOARDS_ICON}/>}>Go to Task Projects</Button>
             </div>
             </div> 
         ) : ( 
@@ -535,8 +602,8 @@ const RequesterPortalPage: React.FC = () => {
     {providerToView && <ProviderProfileViewModal isOpen={isProviderProfileModalOpen} onClose={() => setIsProviderProfileModalOpen(false)} provider={providerToView} />}
     {requestToReport && ( <ReportIssueModal isOpen={isReportIssueModalOpen} onClose={() => setIsReportIssueModalOpen(false)} onSubmitReport={handleReportIssueSubmit} requestSummary={requestToReport.textInput || requestToReport.aiAnalysisSummary || `Request ID: ${requestToReport.id}`} /> )}
     {requestForPayment && ( <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} requestAmount={requestForPayment.suggestedPrice || 0} requestSummary={requestForPayment.textInput || requestForPayment.aiAnalysisSummary || `Request ID: ${requestForPayment.id}`} /> )}
-    {currentChatRequest && user && ( <ChatModal isOpen={isChatModalOpen} onClose={() => setIsChatModalOpen(false)} requestId={currentChatRequest.id} currentUser={user} otherPartyName={currentChatRequest.assignedProviderName || `Provider (ID: ${currentChatRequest.providerId?.substring(0,6)}...)`} initialMessages={taskService.getChatMessages(currentChatRequest.id)} onSendMessage={handleSendMessage} /> )}
-    {isStopActionModalOpen && currentStopIdForAction && currentActionType && (
+    {currentChatRequest && user && ( <ChatModal isOpen={isChatModalOpen} onClose={() => setIsChatModalOpen(false)} requestId={currentChatRequest.id} currentUser={user} otherPartyName={currentChatRequest.assignedProviderName || `Provider (ID: ${currentChatRequest.providerId?.substring(0,6)}...)`} initialMessages={currentChatRequest.chatMessages || []} onSendMessage={handleSendMessage} /> )}
+    {isStopActionModalOpen && currentStopIdForAction && currentActionType && currentJourneyPlan && (
         <ConfigureStopActionModal
             isOpen={isStopActionModalOpen}
             onClose={() => setIsStopActionModalOpen(false)}

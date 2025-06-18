@@ -1,8 +1,4 @@
-// types.ts (at the project root)
-
-// Add all previously defined types here...
-// This is a minimal set to resolve the current error and provide basic structure.
-// A full types.ts would be much more comprehensive.
+// src/types.ts
 
 export interface BlockedTimeSlot {
   id: string;
@@ -19,7 +15,7 @@ export interface BlockedTimeSlot {
 export enum UserRole {
   REQUESTER = "requester",
   PROVIDER = "provider",
-  ADMIN = "admin",
+  ADMIN = "admin"
 }
 
 export type Theme = 'light' | 'dark';
@@ -44,7 +40,7 @@ export interface ProviderDocument {
   customTypeName?: string;
   status: DocumentStatus;
   fileName?: string;
-  fileUrl?: string; // For mock display
+  fileUrl?: string;
   uploadedAt?: string; // ISO Date string
   verifiedAt?: string; // ISO Date string
   expiresAt?: string;  // ISO Date string
@@ -53,12 +49,13 @@ export interface ProviderDocument {
 
 export interface PayoutAccount {
   id: string;
-  type: 'bank_account';
+  type: 'bank_account'; // Could expand to PayPal, etc.
   accountNickname?: string;
   isPrimary: boolean;
+  // Mock fields for bank account
   mockBankName?: string;
   mockAccountNumberLast4?: string;
-  mockRoutingNumberValid?: boolean;
+  mockRoutingNumberValid?: boolean; // Simulates validation
   addedAt: string; // ISO Date string
 }
 
@@ -67,8 +64,37 @@ export interface PayoutHistoryEntry {
   date: string; // ISO Date string
   amount: number;
   status: 'processing' | 'paid' | 'failed';
-  destination: string;
+  destination: string; // e.g., "Bank Account ending in ...1234"
 }
+
+export interface DailyRoutineRouteSlot {
+  days: ('Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun')[];
+  time: string; // HH:MM format
+  isReturnTrip?: boolean; // If this specific slot is a return trip
+}
+export interface DailyRoutineRoute {
+  id: string;
+  providerId: string;
+  routeName: string; // e.g., "Morning School Run", "Evening Commute"
+  origin: GeoLocation;
+  destination: GeoLocation;
+  intermediateStops?: GeoLocation[];
+  isOptimizedByAI?: boolean; // Flag if AI has optimized intermediate stops
+  schedule: DailyRoutineRouteSlot[]; // Allows for multiple times/days for the same route
+  availableForSharing: boolean; // Can other users join or send items along?
+  allowedDeviationKm?: number; // If shared, how far off-route can it go?
+  notes?: string;
+}
+
+export interface HunterModeSettings {
+  isEnabled: boolean;
+  maxDistanceKm?: number;
+  preferredServiceTypes?: ServiceType[];
+  minRequestPrice?: number;
+  minRequesterRating?: number; 
+  keywords?: string; 
+}
+
 
 export interface User {
   id: string;
@@ -78,47 +104,45 @@ export interface User {
   avatarUrl?: string;
   faceIdRegistered: boolean;
   linkedinProfileUrl?: string;
-  registrationDate?: string; // ISO date string
-  lastLogin?: string; // ISO date string
+  registrationDate?: string;
+  lastLogin?: string;
   phone?: string;
   notificationPreferences?: NotificationPreferences;
-  status?: 'active' | 'suspended' | 'pending_verification'; // User account status
+  status?: 'active' | 'suspended' | 'pending_verification';
 
-  // For Requesters
-  requesterRatings?: RequesterRating[]; // Ratings they've received from providers
-  
-  // For Providers
+  requesterRatings?: RequesterRating[];
+  averageRating: number; // Made non-optional
+
+  // Provider specific fields
+  providerDocuments?: ProviderDocument[];
+  payoutAccounts?: PayoutAccount[];
+  payoutHistory?: PayoutHistoryEntry[];
+  mockBalance?: number;
+  workDestination?: GeoLocation | null;
+  dailyRoutineRoutes?: DailyRoutineRoute[];
+  hunterModeSettings?: HunterModeSettings;
   skills?: string[];
   equipment?: string[];
-  detailedReviews?: Review[]; // Reviews they've received
-  averageRating: number;
+  detailedReviews?: Review[];
   badges?: string[];
   verificationLevel?: 'basic' | 'plus' | 'pro';
   priceRange?: 'low' | 'medium' | 'high';
   availabilitySlots?: ProviderAvailabilitySlot[];
   blockedTimeSlots?: BlockedTimeSlot[];
   bio?: string;
-  is2FAEnabledMock?: boolean; // Mock 2FA status
+  is2FAEnabledMock?: boolean;
   operationalHours?: string;
   tasksCompletedCount?: number;
-  memberSinceDate?: string; // ISO date string
-  isVerified?: boolean; // General verification status
-  specialties?: string[]; // e.g., "Residential Plumbing", "Commercial Electrical"
-  location?: GeoLocation; // Provider's base location if relevant
+  memberSinceDate?: string;
+  isVerified?: boolean;
+  specialties?: string[];
+  location?: GeoLocation;
   serviceTypes?: ServiceType[]; // Service types they offer
   transportationMode?: TransportationMode; // Primary mode of transport
-  providerDocuments?: ProviderDocument[];
-  payoutAccounts?: PayoutAccount[];
-  payoutHistory?: PayoutHistoryEntry[];
-  mockBalance?: number; // For provider earnings simulation
-  workDestination?: GeoLocation | null;
-  dailyRoutineRoutes?: DailyRoutineRoute[];
-  hunterModeSettings?: HunterModeSettings;
   vehiclesOffered?: Vehicle[];
   productsOffered?: Product[];
   servicesOffered?: ProfessionalService[];
 }
-
 
 export interface AuthContextType {
   user: User | null;
@@ -127,8 +151,8 @@ export interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   register: (name: string, email: string, pass: string, role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
-  updateUser: (updatedFields: Partial<User>) => void; // For profile updates
-  setUserRole: (role: UserRole) => void; // For role switching demo
+  updateUser: (updatedFields: Partial<User>) => void;
+  setUserRole: (role: UserRole) => void;
 }
 
 
@@ -171,7 +195,7 @@ export enum TransportationMode {
   PLANE_PASSENGER = "plane_passenger",
   HELICOPTER = "helicopter",
   OTHER = "other",
-  NONE = "none" // Explicitly for providers who don't use transport
+  NONE = "none"
 }
 
 export interface Vehicle {
@@ -183,17 +207,16 @@ export interface Vehicle {
   year?: number;
   color?: string;
   licensePlate?: string;
-  capacity?: string; // e.g., "5 passengers", "1 ton cargo"
-  photos: string[]; // URLs to photos
-  specialEquipment?: string[]; // e.g., "Winch", "Refrigeration Unit"
+  capacity?: string;
+  photos: string[];
+  specialEquipment?: string[];
   dimensions?: { lengthMeters?: number; widthMeters?: number; heightMeters?: number };
   payloadCapacityKg?: number;
   numberOfSeats?: number;
   cargoHoldType?: 'open' | 'closed' | 'refrigerated' | 'specialized';
   isWheelchairAccessible?: boolean;
-  features?: string[]; // Additional features like "GPS", "Sunroof"
+  features?: string[];
 }
-
 
 export enum MeasuringUnit {
     KILOGRAM = "kg", POUND = "lbs", METER = "m", FOOT = "ft",
@@ -213,17 +236,17 @@ export interface Product {
   providerId: string;
   name: string;
   description: string;
-  photos: string[]; // URLs to photos
+  photos: string[];
   stock: number;
   price: number;
   category?: string;
-  barcode?: string; // UPC/EAN
-  qrCode?: string;  // Link to product page or more info
-  measuringUnit?: MeasuringUnit | string; // Or allow custom string
-  variantsText?: string; // e.g. "Sizes: S, M, L; Colors: Red, Blue"
+  barcode?: string;
+  qrCode?: string;
+  measuringUnit?: MeasuringUnit | string;
+  variantsText?: string;
   reorderLevel?: number;
   stockHistory?: ProductStockHistoryEntry[];
-  websiteUrl?: string; // Link to product on provider's site
+  websiteUrl?: string;
 }
 
 export interface ProfessionalService {
@@ -231,10 +254,10 @@ export interface ProfessionalService {
   providerId: string;
   name: string;
   description: string;
-  qualifications?: string; // e.g., "Certified Electrician", "Licensed Plumber"
+  qualifications?: string;
   rateType: "hourly" | "fixed" | "quote_based";
-  rate: number; // Amount in USD
-  serviceArea?: string; // e.g., "Citywide", "50km radius"
+  rate: number;
+  serviceArea?: string;
   portfolioUrls?: string[];
   tagsOrSkills?: string[];
 }
@@ -245,7 +268,7 @@ export interface GeoLocation {
   address?: string;
 }
 
-export type MockProviderProfile = User & { // Already in User, but kept for clarity if needed
+export type MockProviderProfile = User & {
   location: GeoLocation;
   serviceTypes: ServiceType[];
   productsOffered?: Product[];
@@ -255,25 +278,24 @@ export type MockProviderProfile = User & { // Already in User, but kept for clar
 
 
 export enum RequestStatus {
-  PENDING = "pending", // Requester created, AI might be analyzing, awaiting provider bids/acceptance
-  AWAITING_ACCEPTANCE = "awaiting_acceptance", // Provider has been offered the task (e.g. via bid or direct assignment)
-  PROVIDER_ASSIGNED = "provider_assigned", // Provider accepted, preparing to start
-  EN_ROUTE = "en_route", // Provider is on the way (for delivery/on-site service)
-  SERVICE_IN_PROGRESS = "service_in_progress", // Service/task is actively being worked on
-  PENDING_PAYMENT = "pending_payment", // Service completed, payment from requester is due
-  COMPLETED = "completed", // Payment made, task fully finished and reviewed (optional)
-  CANCELLED = "cancelled", // Cancelled by requester or provider before completion
-  DISPUTED = "disputed", // Issue reported, under review
-  AWAITING_COUNTER_OFFER_RESPONSE = "awaiting_counter_offer_response", // If provider makes a counter-offer
-  MODERATION_REVIEW = "moderation_review", // Flagged content requiring admin review
-  RESOLVED = "resolved", // Dispute or moderation case resolved
+  PENDING = "pending",
+  AWAITING_ACCEPTANCE = "awaiting_acceptance",
+  PROVIDER_ASSIGNED = "provider_assigned",
+  EN_ROUTE = "en_route",
+  SERVICE_IN_PROGRESS = "service_in_progress",
+  PENDING_PAYMENT = "pending_payment",
+  COMPLETED = "completed",
+  CANCELLED = "cancelled",
+  DISPUTED = "disputed",
+  AWAITING_COUNTER_OFFER_RESPONSE = "awaiting_counter_offer_response",
+  MODERATION_REVIEW = "moderation_review",
+  RESOLVED = "resolved",
 }
-
 
 export interface Review {
   rating: number;
   text: string;
-  date: string; // ISO date string
+  date: string;
   reviewerName?: string;
   reviewerId?: string;
   reviewTitle?: string;
@@ -283,10 +305,10 @@ export interface Review {
     timeliness?: number;
   };
 }
-export interface RequesterRating { // Rating given by a provider to a requester
+export interface RequesterRating {
   rating: number;
   comment?: string;
-  date: string; // ISO Date string
+  date: string;
   providerId: string;
   providerName?: string;
 }
@@ -297,24 +319,24 @@ export interface MockProviderBid {
   providerAvatarUrl?: string;
   bidAmount: number;
   message: string;
-  timestamp: string; // ISO Date string
-  counterOfferDetails?: Partial<RequestData>; // For potential counter-offers
+  timestamp: string;
+  counterOfferDetails?: Partial<RequestData>;
 }
 
 export interface DisputeDetails {
   reason: string;
   description: string;
-  reportedDate: string; // ISO date string
+  reportedDate: string;
   resolutionSummary?: string;
-  resolvedDate?: string; // ISO date string
+  resolvedDate?: string;
 }
 
 export interface RecipientDetails {
   name?: string;
-  contact?: string; // Phone or email
+  contact?: string;
   address?: GeoLocation;
-  addressString?: string; // Raw address string if GeoLocation not available
-  notes?: string; // e.g., "Leave at front door", "Call upon arrival"
+  addressString?: string;
+  notes?: string;
 }
 
 export interface ChatMessage {
@@ -323,8 +345,8 @@ export interface ChatMessage {
   senderId: string;
   senderName: string;
   text: string;
-  timestamp: string; // ISO Date string
-  isAIMessage?: boolean; // If message is from AI assistant
+  timestamp: string;
+  isAIMessage?: boolean;
 }
 
 export interface RequestData {
@@ -333,44 +355,43 @@ export interface RequestData {
   providerId?: string;
   assignedProviderName?: string;
   type: ServiceType;
-  textInput?: string; // User's primary textual input
-  imageB64Data?: string; // For images sent to Gemini
-  imageUrl?: string; // URL if image is stored
-  audioInputUrl?: string; // URL to recorded audio
-  videoInputUrl?: string; // URL to recorded video
-  hasAudio?: boolean; // Indicator if audio was part of original input
-  hasVideo?: boolean; // Indicator if video was part of original input
-  numUploadedMedia?: number; // Count of other uploaded files (docs, etc.)
+  textInput?: string;
+  imageB64Data?: string;
+  imageUrl?: string;
+  audioInputUrl?: string;
+  videoInputUrl?: string;
+  hasAudio?: boolean;
+  hasVideo?: boolean;
+  numUploadedMedia?: number;
   origin?: GeoLocation;
   destination?: GeoLocation;
-  targetMapLocation?: GeoLocation; // General area if origin/dest not specific
+  targetMapLocation?: GeoLocation;
   requestFor: 'self' | 'someone_else';
   recipientDetails?: RecipientDetails;
   status: RequestStatus;
-  creationDate: string; // ISO date string
-  completionDate?: string; // ISO date string
-  aiAnalysisSummary?: string; // AI-generated summary
-  aiExtractedEntities?: Record<string, any>; // AI-extracted entities
-  suggestedPrice?: number; // AI or system suggested price
-  finalPrice?: number; // Agreed price after bidding/negotiation
-  review?: Review; // Requester's review of the provider
-  requesterRatingMock?: number; // Provider's rating of the requester (mocked)
+  creationDate: string;
+  completionDate?: string;
+  aiAnalysisSummary?: string;
+  aiExtractedEntities?: Record<string, any>;
+  suggestedPrice?: number;
+  finalPrice?: number;
+  review?: Review;
+  requesterRatingMock?: number;
   disputeDetails?: DisputeDetails;
   bids?: MockProviderBid[];
   selectedTransportationMode?: TransportationMode;
   aiSuggestedTransportationModes?: TransportationMode[];
-  earnedAmount?: number; // For provider earnings tracking
+  earnedAmount?: number;
   chatMessages?: ChatMessage[];
   isChainedRequest?: boolean;
   linkedRequestId?: string;
-  // Task Project Integration
   journeyPlanId?: string;
   journeyStopId?: string;
   journeyActionId?: string;
-  taskProjectId?: string; // ID of the parent TaskProject
-  taskSubItemId?: string; // ID of the TaskSubItem this request fulfills
-  taskContext?: string;   // Brief context from the task/project
-  isHuntedRequest?: boolean; // True if found via Hunter Mode
+  taskProjectId?: string;
+  taskSubItemId?: string;
+  taskContext?: string;
+  isHuntedRequest?: boolean;
   providerLastLocation?: GeoLocation | null;
 }
 
@@ -391,7 +412,7 @@ export interface MapMarkerData {
   position: google.maps.LatLngLiteral;
   title?: string;
   type: 'origin' | 'destination' | 'provider' | 'product' | 'recipient' | 'generic' | 'current_provider_location' | 'service_area' | 'journey_stop';
-  data?: any; // Can hold provider profile, product details, etc.
+  data?: any;
 }
 
 export interface MapDisplayProps {
@@ -406,7 +427,7 @@ export interface MapDisplayProps {
 }
 
 export interface EarningDataPoint {
-  date: string; // Could be day name, or actual date string
+  date: string;
   earnings: number;
 }
 
@@ -414,10 +435,10 @@ export interface NotificationItem {
   id: string;
   message: string;
   type: 'success' | 'error' | 'info' | 'warning' | 'new_request' | 'bid_received' | 'task_update' | 'payment_update' | 'chat_message';
-  timestamp: string; // ISO Date string
+  timestamp: string;
   read: boolean;
-  link?: string; // Optional link for navigation
-  relatedRequestId?: string; // To link notification to a specific request
+  link?: string;
+  relatedRequestId?: string;
 }
 
 export interface NotificationContextType {
@@ -448,7 +469,7 @@ export interface SplashMessage {
 }
 
 export interface AdminUserView extends User {
-  // averageRating?: number; // Already in User if we unify
+  // Inherits all from User
 }
 
 export interface FlaggedRequestView extends RequestData {
@@ -709,34 +730,6 @@ export interface ProductScanModalProps {
   isOpen: boolean;
   onClose: () => void;
   onProductDetailsReceived: (details: Partial<Product>) => void;
-}
-
-export interface DailyRoutineRouteSlot {
-  days: ('Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun')[];
-  time: string; // HH:MM format
-  isReturnTrip?: boolean; // If this specific slot is a return trip
-}
-export interface DailyRoutineRoute {
-  id: string;
-  providerId: string;
-  routeName: string; // e.g., "Morning School Run", "Evening Commute"
-  origin: GeoLocation;
-  destination: GeoLocation;
-  intermediateStops?: GeoLocation[];
-  isOptimizedByAI?: boolean; // Flag if AI has optimized intermediate stops
-  schedule: DailyRoutineRouteSlot[]; // Allows for multiple times/days for the same route
-  availableForSharing: boolean; // Can other users join or send items along?
-  allowedDeviationKm?: number; // If shared, how far off-route can it go?
-  notes?: string;
-}
-
-export interface HunterModeSettings {
-  isEnabled: boolean;
-  maxDistanceKm?: number;
-  preferredServiceTypes?: ServiceType[];
-  minRequestPrice?: number;
-  minRequesterRating?: number; // Added
-  keywords?: string; // Added
 }
 
 export interface ManageDailyRoutesModalProps {

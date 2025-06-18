@@ -1,25 +1,29 @@
-
 // src/pages/HomePage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.js';
-import { UserRole, AIAnalysisResult, RequestData, ServiceType, GroundingChunk } from '../src/types.js'; 
-import LoadingSpinner from '../App components/ui/LoadingSpinner.js'; 
-import Button from '../App components/ui/Button.js'; 
-import Icon from '../App components/ui/Icon.js'; 
-import { ICON_PATHS, APP_NAME } from '../src/constants.js'; 
-import AudioInputModal from '../App components/interaction/AudioInputModal.js';
-import VideoInputModal from '../App components/interaction/VideoInputModal.js';
-import Textarea from '../App components/ui/Textarea.js'; 
-import { fetchGroundedResponse, analyzeRequestWithGemini } from '../services/geminiService.js'; 
+import { UserRole, AIAnalysisResult, RequestData, ServiceType, GroundingChunk, SplashMessage } from '../types.js'; 
+import LoadingSpinner from '../components/ui/LoadingSpinner.js'; 
+import Button from '../components/ui/Button.js'; 
+import Icon from '../components/ui/Icon.js'; 
+import { ICON_PATHS, APP_NAME, ONBOARDING_SPLASH_MESSAGES } from '../constants.js'; 
+import AudioInputModal from '../components/interaction/AudioInputModal.js';
+import VideoInputModal from '../components/interaction/VideoInputModal.js';
+import Textarea from '../components/ui/Textarea.js'; 
+import { analyzeRequestWithGemini, fetchGroundedResponse, analyzeAudioForServiceRequest, getSuggestionsFromVideo } from '../services/geminiService.js'; 
 import { useToast } from '../contexts/ToastContext.js';
 import { speakText, cancelSpeech } from '../utils/speechUtils.js';
 import { copyToClipboard } from '../utils/clipboardUtils.js';
 
 const HomePage: React.FC = () => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { addToast } = useToast();
+
+  const [showSplashScreen, setShowSplashScreen] = useState(() => !localStorage.getItem('splashScreenShown_v1'));
+  const [currentSplashMessage, setCurrentSplashMessage] = useState<SplashMessage | null>(ONBOARDING_SPLASH_MESSAGES[0] || null);
+  const [splashMessageIndex, setSplashMessageIndex] = useState(0);
+  const [gemmaWelcomeSpoken, setGemmaWelcomeSpoken] = useState(false);
 
   const [isAudioModalOpen, setIsAudioModalOpen] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -35,14 +39,55 @@ const HomePage: React.FC = () => {
   const [isSpeakingGroundedResponse, setIsSpeakingGroundedResponse] = useState(false);
 
   useEffect(() => {
-    // Cleanup speech on component unmount
-    return () => { 
-      cancelSpeech();
-    };
-  }, []);
+    if (!showSplashScreen || !ONBOARDING_SPLASH_MESSAGES.length) {
+        setShowSplashScreen(false); 
+        return;
+    }
 
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900"><LoadingSpinner text="Loading your experience..." /></div>;
+    if (splashMessageIndex < ONBOARDING_SPLASH_MESSAGES.length) {
+      setCurrentSplashMessage(ONBOARDING_SPLASH_MESSAGES[splashMessageIndex]);
+      const timer = setTimeout(() => {
+        setSplashMessageIndex(prev => prev + 1);
+      }, ONBOARDING_SPLASH_MESSAGES[splashMessageIndex].delay);
+      return () => clearTimeout(timer);
+    } else {
+      setCurrentSplashMessage(null);
+      const hideTimer = setTimeout(() => {
+        setShowSplashScreen(false);
+        localStorage.setItem('splashScreenShown_v1', 'true');
+      }, 700); 
+      return () => clearTimeout(hideTimer);
+    }
+  }, [showSplashScreen, splashMessageIndex]);
+  
+  useEffect(() => {
+    if (!showSplashScreen && !gemmaWelcomeSpoken && isAuthenticated && user) {
+      const welcomeMsg = `Welcome, ${user.name}! I'm Gemma, your AI assistant for ${APP_NAME}. How can I help you today? You can ask me for rides, services, products, or help with tasks. Just tell me what you need, or use the camera for live assistance.`;
+      speakText(welcomeMsg, () => {});
+      setGemmaWelcomeSpoken(true); 
+    }
+    return () => {
+      cancelSpeech(); 
+    };
+  }, [showSplashScreen, gemmaWelcomeSpoken, isAuthenticated, user]);
+
+
+  if (authLoading || showSplashScreen) {
+    return (
+      <div className="fixed inset-0 flex flex-col justify-center items-center bg-gradient-to-br from-gray-800 via-gray-900 to-blue-900 text-white p-6 z-[10001] transition-opacity duration-500 ease-in-out"
+           style={{ opacity: showSplashScreen ? 1 : 0 }}
+      >
+        <Icon path={ICON_PATHS.SPARKLES} className="w-20 h-20 sm:w-24 sm:h-24 text-blue-400 mb-6 animate-pulse" />
+        <h1 className="text-4xl sm:text-5xl font-bold mb-4 tracking-tight">{APP_NAME}</h1>
+        {currentSplashMessage ? (
+            <p className="text-lg sm:text-xl text-blue-200 animate-fadeIn">
+                {currentSplashMessage.text}
+            </p>
+        ) : (
+           showSplashScreen && <LoadingSpinner text="Finalizing..." color="text-blue-300" />
+        )}
+      </div>
+    );
   }
 
   if (!isAuthenticated || !user) {
@@ -118,13 +163,13 @@ const HomePage: React.FC = () => {
   const openAudioModal = () => {
     setInteractionError(null);
     setLastVideoSuggestion(null);
-    cancelSpeech(); // Stop any ongoing speech before opening modal
+    cancelSpeech(); 
     setIsAudioModalOpen(true);
   }
   const openVideoModal = () => {
     setInteractionError(null);
     setLastVideoSuggestion(null);
-    cancelSpeech(); // Stop any ongoing speech
+    cancelSpeech(); 
     setIsVideoModalOpen(true);
   }
 
@@ -136,7 +181,7 @@ const HomePage: React.FC = () => {
     setGroundedError(null);
     setGroundedResponse(null);
     setGroundedSources([]);
-    cancelSpeech(); // Stop any ongoing speech
+    cancelSpeech(); 
     setIsSpeakingGroundedResponse(false);
 
     try {
