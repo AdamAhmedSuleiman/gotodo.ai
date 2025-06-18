@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>gotodo.ai - Your AI Powered Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Basic reset and body styles - will be managed by ThemeContext */
+      body {
+        font-family: 'Inter', sans-serif; /* A common Tailwind font */
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      /* Custom scrollbar for webkit browsers */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+      .dark ::-webkit-scrollbar-track {
+        background: #2d3748; /* gray-800 */
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #4a5568; /* gray-600 */
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: #718096; /* gray-500 */
+      }
+
+      /* Animation for splash screen */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        /* Pulse for splash icon */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      // Initialize the Google Maps API script loader
+      function initMapApi() {
+        if (window.google && window.google.maps) {
+          console.log("Google Maps API already available.");
+          window.googleMapsApiLoaded = true;
+          window.dispatchEvent(new CustomEvent('google-maps-api-loaded'));
+          return;
+        }
+        console.log("Loading Google Maps API...");
+        const script = document.createElement('script');
+        // IMPORTANT: This key is specifically for Maps & Places.
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AlzaSyDooPdZoBZQS74FeVnacXSbNd_eJhv3e8s&libraries=places,marker,directions,geocoding&callback=googleMapsApiInitialized`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+
+      window.googleMapsApiInitialized = function() {
+        console.log("Google Maps API script loaded and initialized.");
+        window.googleMapsApiLoaded = true;
+        window.dispatchEvent(new CustomEvent('google-maps-api-loaded'));
+      };
+      
+      // Expose API_KEY for Gemini and other Cloud AI Services
+      // Ensure this key has appropriate restrictions if used client-side.
+      window.process = {
+        env: {
+          // This key is for Gemini (Vertex AI) and potentially other Cloud AI services.
+          API_KEY: "AIzaSyD3yw81xpancpf3_m5FIX3D3jcLvBj1J1g" 
+        }
+      };
+
+      // Initial theme setup based on localStorage or system preference
+      try {
+        const theme = localStorage.getItem('gotodo-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.classList.add(theme);
+        if (theme === 'dark') {
+            document.body.style.backgroundColor = '#111827'; // gray-900
+            document.body.style.color = '#d1d5db'; // gray-300
+        } else {
+            document.body.style.backgroundColor = '#f4f7f6'; // Light gray-ish
+            document.body.style.color = '#333'; // Default dark text
+        }
+      } catch (e) {
+        document.documentElement.classList.add('light'); // Default to light on error
+        document.body.style.backgroundColor = '#f4f7f6';
+        document.body.style.color = '#333';
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "@headlessui/react": "https://esm.sh/@headlessui/react@^2.2.4",
+    "@google/genai": "https://esm.sh/@google/genai@^1.5.1",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.6.2",
+    "recharts": "https://esm.sh/recharts@^2.15.3"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+    <script>initMapApi();</script> 
+  </body>
+</html>
