@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "gemini": {
+      "command": "npx",
+      "args": ["-y", "gemini-mcp-tool"],
+      "description": "Google Gemini via the Gemini CLI. Use for very large context: long files, big PDFs, video/audio, or anything past Claude's window (Gemini's context is ~1M tokens). Auth: run `gemini` once and log in with your Google account."
+    },
+    "codex": {
+      "command": "codex",
+      "args": ["mcp"],
+      "description": "OpenAI GPT via the Codex CLI running as an MCP server. Use as a second-opinion reviewer on code Claude just wrote. Auth: run `codex` once and sign in with your ChatGPT account."
+    }
+  }
+}
