@@ -30,6 +30,19 @@ dealbreaker.
 
 ## Setup (about 10 minutes)
 
+### Easiest path: one script
+
+On **your own machine** (not a remote/cloud session), from the repo root:
+
+```bash
+bash scripts/setup-multi-model.sh
+```
+
+It installs both CLIs and walks you through the two logins. When it opens a
+browser, sign in with your Google account (Gemini) and your ChatGPT account
+(Codex). That's the whole thing — skip to "Verify" below. The manual steps
+that follow are the same actions, spelled out, if you'd rather do them by hand.
+
 ### 1. Install and log into the Gemini CLI
 
 ```bash
@@ -49,7 +62,7 @@ codex             # run once; sign in with your ChatGPT account when prompted
 `.mcp.json` (committed) registers both as MCP servers for Claude Code:
 
 - `gemini` → `npx -y gemini-mcp-tool` (bridges the Gemini CLI into MCP)
-- `codex`  → `codex mcp` (Codex CLI's built-in MCP server mode)
+- `codex`  → `codex mcp-server` (Codex CLI's built-in MCP server mode)
 
 Start Claude Code in this repo and approve the two MCP servers when it asks.
 Verify they're connected:
